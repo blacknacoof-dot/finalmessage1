@@ -1,0 +1,8 @@
+{
+  "name": "Copy of FinalMessage",
+  "description": "A functional prototype of the 'FinalMessage' digital will service. Features include an AI-powered will editor, multimedia message management, and verifier designation. Available in English and Korean.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
