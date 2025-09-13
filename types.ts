@@ -22,7 +22,12 @@ export interface Verifier {
   relationship: string;
   phone?: string;
   address?: string;
+  inheritanceShare?: number; // 상속 비율 (%) - 기존 코드 호환성 유지
+  notes?: string; // 추가 메모 - 기존 코드 호환성 유지
 }
+
+// Beneficiary는 Verifier와 동일한 구조로 통합
+export type Beneficiary = Verifier;
 
 export interface Notary {
   id: string;
@@ -40,15 +45,21 @@ export interface MediaFile {
   type: 'video' | 'audio';
   size: string;
   date: string;
+  beneficiaries?: Beneficiary[]; // 상속자 목록
 }
 
 export type AssetType = 'BankAccount' | 'CryptoWallet' | 'SecretNote';
 
 export interface BaseAsset {
-  id:string;
+  id: string;
   type: AssetType;
   name: string;
-  password?: string;
+  tags: string[];                    // 해시태그 (#주계좌 #비상금 등)
+  importance: 'high' | 'medium' | 'low';  // 중요도
+  isLocked: boolean;                 // 잠금 상태
+  password?: string;                 // 개별 비밀번호
+  recoveryEmail?: string;            // 복구용 이메일
+  maskedView?: boolean;              // 마스킹 표시 여부
 }
 
 export interface BankAccountAsset extends BaseAsset {

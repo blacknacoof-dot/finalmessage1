@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Admin-specific styles */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #0f172a;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+  background-color: #0f172a;
+  color: white;
+}
+
+/* Admin-specific button styles - different from main app */
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #334155 !important;
+  color: white !important;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+button:hover {
+  background-color: #475569 !important;
+  border-color: #06b6d4;
+}
+
+button:focus,
+button:focus-visible {
+  outline: 2px solid #06b6d4;
+  outline-offset: 2px;
+}
+
+/* Override for admin-specific buttons */
+.admin-primary-btn {
+  background-color: #0ea5e9 !important;
+}
+
+.admin-primary-btn:hover {
+  background-color: #0284c7 !important;
+}
+
+.admin-secondary-btn {
+  background-color: #64748b !important;
+}
+
+.admin-secondary-btn:hover {
+  background-color: #475569 !important;
+}
+
+.admin-danger-btn {
+  background-color: #dc2626 !important;
+}
+
+.admin-danger-btn:hover {
+  background-color: #b91c1c !important;
+}
+
+/* Ensure no light theme overrides for admin */
+@media (prefers-color-scheme: light) {
+  button {
+    background-color: #334155 !important;
+    color: white !important;
+  }
+  
+  button:hover {
+    background-color: #475569 !important;
+  }
+}
+
+a {
+  font-weight: 500;
+  color: #06b6d4;
+  text-decoration: inherit;
+}
+
+a:hover {
+  color: #0891b2;
+}

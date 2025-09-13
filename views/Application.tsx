@@ -1,28 +1,74 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from '@google/genai';
-
-// PortOne 타입 정의
-declare global {
-    interface Window {
-        PortOne: any;
-    }
-}
 import { useLocalStorage } from '../App';
 import type { Language } from '../App';
-import type { User, Verifier, MediaFile, Asset, AssetType, BankAccountAsset, CryptoWalletAsset, SecretNoteAsset, Notary } from '../types';
+import type { User, Verifier, MediaFile, Asset, AssetType, BankAccountAsset, CryptoWalletAsset, SecretNoteAsset, Notary, Beneficiary } from '../types';
+import { MessageService } from '../services/messageService';
+import { WalletManager } from '../services/walletManager';
+import { MessageManager } from '../components/MessageManager';
+import { messageAPI, Message } from '../services/api';
+import { toast } from '../utils/notifications';
+import { 
+    maskAccountNumber, 
+    maskCryptoAddress, 
+    maskPassword, 
+    maskSeedPhrase,
+    parseHashtags,
+    getSecurityLevel
+} from '../utils/assetSecurity';
 import {
     UserCircleIcon, LogoutIcon, PremiumIcon, MultimediaIcon,
     VaultIcon, PlusIcon, TrashIcon, UploadIcon,
     VideoCameraIcon, MicrophoneIcon, SparklesIcon, LockClosedIcon,
     KeyIcon, BanknotesIcon, DocumentTextIcon, HomeIcon, CheckCircleIcon, ArrowRightIcon,
-    Cog6ToothIcon, LegalIcon, PaperAirplaneIcon, CreditCardIcon
+    Cog6ToothIcon, LegalIcon, PaperAirplaneIcon, CreditCardIcon, PencilIcon, EyeIcon,
+    CalendarIcon, ClockIcon, XMarkIcon
 } from '../components/icons';
 
 // --- MOCK DATA ---
 const mockVerifiers: Verifier[] = [];
 const mockMediaFiles: MediaFile[] = [];
-const mockAssets: Asset[] = [];
+const mockAssets: Asset[] = [
+    {
+        id: 'bank_1',
+        type: 'BankAccount',
+        name: '신한은행 주거래',
+        tags: ['주계좌', '급여', '생활비'],
+        importance: 'high',
+        isLocked: true,
+        password: 'bank1234!',
+        recoveryEmail: 'recovery@example.com',
+        maskedView: true,
+        bankName: '신한은행',
+        accountNumber: '110-123-456789',
+        notes: '매월 급여 입금 계좌'
+    },
+    {
+        id: 'crypto_1', 
+        type: 'CryptoWallet',
+        name: '비트코인 메인 지갑',
+        tags: ['암호화폐', '투자', '장기보유'],
+        importance: 'high',
+        isLocked: true,
+        password: 'crypto2024!',
+        recoveryEmail: 'crypto@example.com',
+        maskedView: true,
+        cryptoName: 'Bitcoin',
+        address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
+        seedPhrase: 'abandon ability able about above absent absorb abstract absurd abuse access accident'
+    },
+    {
+        id: 'note_1',
+        type: 'SecretNote',
+        name: '가족 비밀번호 모음',
+        tags: ['비밀번호', '가족', '중요'],
+        importance: 'medium',
+        isLocked: false,
+        maskedView: false,
+        content: '집 현관문: 1234\n금고 비밀번호: 9876\n와이파이: home123!'
+    }
+];
 const mockNotary: Notary | null = null;
 const mockSettings = {
     inactivityTrigger: {
@@ -721,108 +767,65 @@ const PaymentModal: React.FC<{
     onSuccess: (planType: SubscriptionPlan, paymentDetails: User['subscription']) => void; 
     t: typeof translations['en']; 
 }> = ({ plan, onClose, onSuccess, t }) => {
-    const [isProcessing, setIsProcessing] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer'>('card');
     
-    const getPlanPrice = (plan: SubscriptionPlan) => {
-        switch (plan) {
-            case 'Monthly': return 9900; // 9,900원
-            case 'Annual': return 99000; // 99,000원
-            case 'Lifetime': return 299000; // 299,000원
-            default: return 0;
+    const handlePayment = (e: React.FormEvent) => {
+        e.preventDefault();
+        const nextPaymentDate = new Date();
+        if (plan === 'Annual') {
+            nextPaymentDate.setFullYear(nextPaymentDate.getFullYear() + 1);
+        } else if (plan === 'Monthly') {
+            nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
         }
-    };
-    
-    const handlePayment = async () => {
-        setIsProcessing(true);
-        
-        try {
-            // 포트원이 로드되었는지 확인
-            if (typeof window.PortOne === 'undefined') {
-                alert('결제 시스템을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
-                return;
-            }
-            
-            const paymentId = `payment-${Date.now()}`;
-            const orderName = `FinalMessage ${plan === 'Monthly' ? t.monthlyPlan : plan === 'Annual' ? t.annualPlan : t.lifetimePlan}`;
-            const amount = getPlanPrice(plan);
-            
-            const response = await window.PortOne.requestPayment({
-                storeId: import.meta.env.VITE_PORTONE_STORE_ID || 'store-test',
-                paymentId,
-                orderName,
-                totalAmount: amount,
-                currency: 'KRW',
-                channelKey: import.meta.env.VITE_PORTONE_CHANNEL_KEY || 'channel-key-test',
-                payMethod: 'CARD'
-            });
-            
-            if (response.code != null) {
-                // 결제 실패
-                alert(`결제 실패: ${response.message}`);
-                return;
-            }
-            
-            // 결제 성공 - 서버에서 검증 필요 (여기서는 클라이언트에서 처리)
-            const nextPaymentDate = new Date();
-            if (plan === 'Annual') {
-                nextPaymentDate.setFullYear(nextPaymentDate.getFullYear() + 1);
-            } else if (plan === 'Monthly') {
-                nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
-            }
 
-            const newSubscription: User['subscription'] = {
-                planType: plan,
-                status: 'active',
-                nextPaymentDate: plan === 'Lifetime' ? 'N/A' : nextPaymentDate.toLocaleDateString(),
-                paymentMethod: {
-                    type: 'Card',
-                    details: response.paymentMethod?.card?.number ? `**** ${response.paymentMethod.card.number.slice(-4)}` : 'Card'
-                },
-                paymentId: response.paymentId
-            };
-            
-            onSuccess(plan, newSubscription);
-            
-        } catch (error) {
-            console.error('Payment error:', error);
-            alert('결제 처리 중 오류가 발생했습니다.');
-        } finally {
-            setIsProcessing(false);
-        }
+        const newSubscription: User['subscription'] = {
+            planType: plan,
+            status: 'active',
+            nextPaymentDate: plan === 'Lifetime' ? 'N/A' : nextPaymentDate.toLocaleDateString(),
+            paymentMethod: {
+                type: 'Card', // Simplified for prototype
+                details: 'Visa **** 4242'
+            }
+        };
+        onSuccess(plan, newSubscription);
     }
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md">
-                <div className="p-6">
-                    <h3 className="text-lg font-bold text-white">{t.paymentModalTitle}</h3>
-                    <p className="text-sm text-slate-400 mt-1">{t.paymentModalSubtitle} <span className="font-semibold text-sky-400">{plan === 'Monthly' ? t.monthlyPlan : plan === 'Annual' ? t.annualPlan : t.lifetimePlan}</span></p>
-                    
-                    <div className="mt-6 p-4 bg-slate-700/30 rounded-lg">
-                        <div className="flex justify-between items-center">
-                            <span className="text-slate-300">결제 금액</span>
-                            <span className="text-xl font-bold text-white">{getPlanPrice(plan).toLocaleString()}원</span>
+                <form onSubmit={handlePayment}>
+                    <div className="p-6">
+                        <h3 className="text-lg font-bold text-white">{t.paymentModalTitle}</h3>
+                        <p className="text-sm text-slate-400 mt-1">{t.paymentModalSubtitle} <span className="font-semibold text-sky-400">{plan === 'Monthly' ? t.monthlyPlan : plan === 'Annual' ? t.annualPlan : t.lifetimePlan}</span>.</p>
+                        
+                        <div className="mt-6">
+                            <div className="grid grid-cols-2 gap-2 bg-slate-700/50 p-1 rounded-lg">
+                                <button type="button" onClick={() => setPaymentMethod('card')} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${paymentMethod === 'card' ? 'bg-sky-600 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>{t.creditCard}</button>
+                                <button type="button" onClick={() => setPaymentMethod('transfer')} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${paymentMethod === 'transfer' ? 'bg-sky-600 text-white' : 'text-slate-300 hover:bg-slate-600'}`}>{t.bankTransfer}</button>
+                            </div>
+
+                            {paymentMethod === 'card' ? (
+                                <div className="mt-4 space-y-4">
+                                    <div><label htmlFor="card-number" className="block text-sm font-medium text-slate-300">{t.cardNumber}</label><input id="card-number" type="text" placeholder="0000 0000 0000 0000" required className="mt-1 block w-full bg-slate-700/50 border border-slate-600 rounded-md py-2 px-3 text-white" /></div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div><label htmlFor="expiry" className="block text-sm font-medium text-slate-300">{t.expiryDate}</label><input id="expiry" type="text" placeholder="MM/YY" required className="mt-1 block w-full bg-slate-700/50 border border-slate-600 rounded-md py-2 px-3 text-white" /></div>
+                                        <div><label htmlFor="cvc" className="block text-sm font-medium text-slate-300">{t.cvc}</label><input id="cvc" type="text" placeholder="123" required className="mt-1 block w-full bg-slate-700/50 border border-slate-600 rounded-md py-2 px-3 text-white" /></div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="mt-4 p-4 bg-slate-700/50 rounded-lg text-sm text-slate-300">
+                                    <p>우리은행 1002-123-456789</p>
+                                    <p>예금주: (주)파이널메시지</p>
+                                    <p className="mt-2 text-xs text-slate-400">입금 확인 후 플랜이 활성화됩니다.</p>
+                                </div>
+                            )}
                         </div>
-                        <p className="text-xs text-slate-400 mt-2">포트원 결제 시스템으로 안전하게 결제됩니다.</p>
                     </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-6 border-t border-slate-700">
-                    <button 
-                        onClick={onClose} 
-                        disabled={isProcessing}
-                        className="px-4 py-2 text-slate-400 hover:text-white transition-colors disabled:opacity-50"
-                    >
-                        {t.cancel}
-                    </button>
-                    <button 
-                        onClick={handlePayment}
-                        disabled={isProcessing}
-                        className="px-6 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isProcessing ? '결제 처리 중...' : `${getPlanPrice(plan).toLocaleString()}원 결제하기`}
-                    </button>
-                </div>
+                    <div className="bg-slate-800/50 px-6 py-4 flex justify-end gap-3 rounded-b-xl">
+                        <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700/50 hover:bg-slate-700 rounded-md transition-colors">{t.cancel}</button>
+                        <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-md transition-colors">{t.payNow}</button>
+                    </div>
+                </form>
             </div>
         </div>
     );
@@ -830,6 +833,7 @@ const PaymentModal: React.FC<{
 
 
 // --- SCREENS & VIEWS ---
+
 
 const HomeView: React.FC<{ user: User; setActiveTab: (tab: string) => void; t: typeof translations['en'] }> = ({ user, setActiveTab, t }) => {
     const [message] = useLocalStorage('finalmessage_message', '');
@@ -903,9 +907,53 @@ const MessageView: React.FC<{ user: User, onUpgrade: () => void, language: Langu
     const [lastSaved, setLastSaved] = useLocalStorage('finalmessage_lastSaved', '');
     const [generatingTemplate, setGeneratingTemplate] = useState<string | null>(null);
     const [showPremiumModal, setShowPremiumModal] = useState(false);
+    const [saving, setSaving] = useState(false);
     
-    const handleSave = () => {
-        setLastSaved(new Date().toLocaleString());
+    // 서비스 인스턴스
+    const messageService = new MessageService();
+    const walletManager = new WalletManager();
+    
+    const handleSave = async () => {
+        if (!message.trim()) {
+            alert('메시지를 입력해주세요.');
+            return;
+        }
+        
+        setSaving(true);
+        try {
+            console.log('🔄 메시지 저장 시작...');
+            
+            // 자동 지갑 설정 (사용자 모름)
+            await walletManager.setupUserWallet(user.email);
+            
+            // 메시지 저장 (블록체인 포함)
+            const result = await messageService.saveMessage(
+                user.email,
+                '나의 유산 메시지',
+                message,
+                true // 암호화 옵션
+            );
+            
+            if (result.success) {
+                setLastSaved(new Date().toLocaleString());
+                console.log('✅ 메시지 저장 완료:', result.message);
+                
+                // 사용자 친화적 메시지 표시
+                if (result.transactionHash) {
+                    alert('메시지가 블록체인에 안전하게 저장되었습니다! 🔒');
+                } else {
+                    alert('메시지가 저장되었습니다! (블록체인 백업 진행 중...)');
+                }
+            } else {
+                console.error('❌ 메시지 저장 실패:', result.message);
+                alert('메시지 저장 중 오류가 발생했습니다: ' + result.message);
+            }
+        } catch (error: any) {
+            console.error('메시지 저장 예외:', error);
+            alert('메시지 저장 중 오류가 발생했습니다: ' + error.message);
+        } finally {
+            setSaving(false);
+        }
     };
 
     const aiTemplates = [
@@ -941,7 +989,7 @@ const MessageView: React.FC<{ user: User, onUpgrade: () => void, language: Langu
             setMessage(t.aiPlaceholder);
         } finally {
             setGeneratingTemplate(null);
-            handleSave();
+            await handleSave();
         }
     };
 
@@ -950,7 +998,14 @@ const MessageView: React.FC<{ user: User, onUpgrade: () => void, language: Langu
             <div className="flex justify-between items-center mb-4"><h2 className="text-2xl font-bold text-white">{t.yourFinalMessage}</h2>{lastSaved && <p className="text-sm text-slate-400">{t.lastSaved} {lastSaved}</p>}</div>
             <div className="bg-slate-900/70 rounded-md border border-slate-700"><textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t.aiPlaceholder.substring(0, 100) + '...'} className="w-full h-80 bg-transparent p-4 text-slate-300 placeholder-slate-500 focus:outline-none resize-none"/></div>
             <div className="mt-6 flex justify-between items-start">
-                <button onClick={handleSave} className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-md transition-colors">{t.saveMessage}</button>
+                <button 
+                    onClick={handleSave} 
+                    disabled={saving}
+                    className={`px-4 py-2 ${saving ? 'bg-gray-600' : 'bg-sky-600 hover:bg-sky-700'} text-white font-semibold rounded-md transition-colors flex items-center gap-2`}
+                >
+                    {saving && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+                    {saving ? '저장 중...' : t.saveMessage}
+                </button>
             
                 <div className="text-right">
                     <h3 className="font-semibold text-slate-300 mb-2 flex items-center justify-end gap-2">
@@ -984,6 +1039,14 @@ const MultimediaView: React.FC<{ user: User, onUpgrade: () => void, t: typeof tr
     const [mediaFiles, setMediaFiles] = useLocalStorage<MediaFile[]>('finalmessage_media', mockMediaFiles);
     const [showPremiumModal, setShowPremiumModal] = useState(false);
     const [recordingType, setRecordingType] = useState<'video' | 'audio' | null>(null);
+    const [isFormMode, setIsFormMode] = useState(false);
+    const [currentMedia, setCurrentMedia] = useState<{ id?: string; title: string; type: 'video' | 'audio'; file?: File; recipients: string[]; deliveryDate: string; beneficiaries: Beneficiary[]; }>({
+        title: '',
+        type: 'video',
+        recipients: [''],
+        deliveryDate: '',
+        beneficiaries: []
+    });
 
     const handleAction = (action: () => void) => {
         if (user.plan === 'Free') {
@@ -997,9 +1060,218 @@ const MultimediaView: React.FC<{ user: User, onUpgrade: () => void, t: typeof tr
         setMediaFiles(files => files.filter(f => f.id !== id));
     };
     
+    const handleEdit = (media: MediaFile) => {
+        setCurrentMedia({
+            id: media.id,
+            title: media.name,
+            type: media.type,
+            recipients: [''],
+            deliveryDate: '',
+            beneficiaries: media.beneficiaries || []
+        });
+        setIsFormMode(true);
+    };
+
+    const handleAddNew = () => {
+        setCurrentMedia({
+            title: '',
+            type: 'video',
+            recipients: [''],
+            deliveryDate: '',
+            beneficiaries: []
+        });
+        setIsFormMode(true);
+    };
+    
     const handleSaveRecording = (file: MediaFile) => {
         setMediaFiles(files => [...files, file]);
         setRecordingType(null);
+    };
+
+    const handleSaveMedia = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!currentMedia.title.trim()) {
+            toast.error('제목을 입력해주세요');
+            return;
+        }
+        
+        const mediaData: MediaFile = {
+            id: currentMedia.id || `media_${Date.now()}`,
+            name: currentMedia.title,
+            type: currentMedia.type,
+            size: '0 MB',
+            date: new Date().toLocaleDateString(),
+            beneficiaries: currentMedia.beneficiaries
+        };
+
+        if (currentMedia.id) {
+            setMediaFiles(files => files.map(f => f.id === currentMedia.id ? mediaData : f));
+        } else {
+            setMediaFiles(files => [...files, mediaData]);
+        }
+        
+        setIsFormMode(false);
+        toast.success('멀티미디어가 저장되었습니다');
+    };
+
+    const handleCancel = () => {
+        setIsFormMode(false);
+        setCurrentMedia({
+            title: '',
+            type: 'video',
+            recipients: [''],
+            deliveryDate: '',
+            beneficiaries: []
+        });
+    };
+
+    const addRecipient = () => {
+        setCurrentMedia(prev => ({
+            ...prev,
+            recipients: [...prev.recipients, '']
+        }));
+    };
+
+    const updateRecipient = (index: number, value: string) => {
+        setCurrentMedia(prev => ({
+            ...prev,
+            recipients: prev.recipients.map((r, i) => i === index ? value : r)
+        }));
+    };
+
+    const removeRecipient = (index: number) => {
+        if (currentMedia.recipients.length > 1) {
+            setCurrentMedia(prev => ({
+                ...prev,
+                recipients: prev.recipients.filter((_, i) => i !== index)
+            }));
+        }
+    };
+    
+    if (isFormMode) {
+        return (
+            <div className="max-w-2xl mx-auto">
+                <div className="bg-slate-800/50 rounded-lg border border-slate-700/50 p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold text-white">
+                            {currentMedia.id ? '멀티미디어 편집' : '새 멀티미디어 추가'}
+                        </h3>
+                        <button onClick={handleCancel} className="text-slate-400 hover:text-white">
+                            <XMarkIcon className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleSaveMedia} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                                멀티미디어 제목
+                            </label>
+                            <input
+                                type="text"
+                                value={currentMedia.title}
+                                onChange={(e) => setCurrentMedia(prev => ({ ...prev, title: e.target.value }))}
+                                placeholder="제목을 입력하세요..."
+                                className="w-full bg-slate-700/50 border border-slate-600 rounded-md py-2 px-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                                미디어 타입
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentMedia(prev => ({ ...prev, type: 'video' }))}
+                                    className={`flex items-center gap-2 p-3 rounded-lg border ${
+                                        currentMedia.type === 'video'
+                                            ? 'bg-sky-600/20 border-sky-500 text-sky-400'
+                                            : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:border-slate-500'
+                                    }`}
+                                >
+                                    <VideoCameraIcon className="w-5 h-5" />
+                                    비디오
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentMedia(prev => ({ ...prev, type: 'audio' }))}
+                                    className={`flex items-center gap-2 p-3 rounded-lg border ${
+                                        currentMedia.type === 'audio'
+                                            ? 'bg-sky-600/20 border-sky-500 text-sky-400'
+                                            : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:border-slate-500'
+                                    }`}
+                                >
+                                    <MicrophoneIcon className="w-5 h-5" />
+                                    오디오
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                                수신자 (이메일)
+                            </label>
+                            {currentMedia.recipients.map((recipient, index) => (
+                                <div key={index} className="flex gap-2 mb-2">
+                                    <input
+                                        type="email"
+                                        value={recipient}
+                                        onChange={(e) => updateRecipient(index, e.target.value)}
+                                        placeholder="recipient@example.com"
+                                        className="flex-1 bg-slate-700/50 border border-slate-600 rounded-md py-2 px-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                                    />
+                                    {currentMedia.recipients.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => removeRecipient(index)}
+                                            className="px-3 py-2 text-slate-400 hover:text-rose-400 bg-slate-700/50 border border-slate-600 rounded-md"
+                                        >
+                                            <TrashIcon className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={addRecipient}
+                                className="text-sm text-sky-400 hover:text-sky-300"
+                            >
+                                + 수신자 추가
+                            </button>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                                전달 날짜
+                            </label>
+                            <input
+                                type="datetime-local"
+                                value={currentMedia.deliveryDate}
+                                onChange={(e) => setCurrentMedia(prev => ({ ...prev, deliveryDate: e.target.value }))}
+                                className="w-full bg-slate-700/50 border border-slate-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                            />
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-4">
+                            <button
+                                type="button"
+                                onClick={handleCancel}
+                                className="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700/50 hover:bg-slate-700 rounded-md transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-md transition-colors"
+                            >
+                                저장
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        );
     }
     
     return (
@@ -1010,9 +1282,13 @@ const MultimediaView: React.FC<{ user: User, onUpgrade: () => void, t: typeof tr
                     <p className="text-slate-400 mt-1">{t.multimediaSubtitle}</p>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={() => handleAction(() => {})} className="flex items-center gap-2 px-3 py-2 text-sm bg-slate-700/50 hover:bg-slate-700 text-slate-300 font-semibold rounded-md transition-colors"><UploadIcon className="w-5 h-5"/>{t.uploadFile}</button>
-                    <button onClick={() => handleAction(() => setRecordingType('video'))} className="flex items-center gap-2 px-3 py-2 text-sm bg-sky-600/80 hover:bg-sky-700 text-white font-semibold rounded-md transition-colors"><VideoCameraIcon className="w-5 h-5"/>{t.recordVideo}</button>
-                    <button onClick={() => handleAction(() => setRecordingType('audio'))} className="flex items-center gap-2 px-3 py-2 text-sm bg-sky-600/80 hover:bg-sky-700 text-white font-semibold rounded-md transition-colors"><MicrophoneIcon className="w-5 h-5"/>{t.recordAudio}</button>
+                    <button
+                        onClick={handleAddNew}
+                        className="flex items-center gap-2 px-4 py-2 text-sm bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-md transition-colors"
+                    >
+                        <PlusIcon className="w-5 h-5" />
+                        새 미디어 추가
+                    </button>
                 </div>
             </div>
 
@@ -1029,18 +1305,35 @@ const MultimediaView: React.FC<{ user: User, onUpgrade: () => void, t: typeof tr
                     <h3 className="mt-4 text-lg font-semibold text-white">{t.noMedia}</h3>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-4">
                     {mediaFiles.map(file => (
                         <div key={file.id} className="bg-slate-800/50 p-4 rounded-lg border border-slate-700/50">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-slate-700 rounded-md">
-                                    {file.type === 'video' ? <VideoCameraIcon className="w-6 h-6 text-sky-400"/> : <MicrophoneIcon className="w-6 h-6 text-sky-400"/>}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-slate-700 rounded-md">
+                                        {file.type === 'video' ? <VideoCameraIcon className="w-6 h-6 text-sky-400"/> : <MicrophoneIcon className="w-6 h-6 text-sky-400"/>}
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-white">{file.name}</p>
+                                        <p className="text-xs text-slate-400">{file.size} &middot; {file.date}</p>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <p className="font-semibold text-white truncate">{file.name}</p>
-                                    <p className="text-xs text-slate-400">{file.size} &middot; {file.date}</p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => handleEdit(file)}
+                                        className="p-2 text-slate-400 hover:text-sky-400 rounded-md transition-colors"
+                                        title="편집"
+                                    >
+                                        <PencilIcon className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(file.id)}
+                                        className="p-2 text-slate-400 hover:text-rose-400 rounded-md transition-colors"
+                                        title="삭제"
+                                    >
+                                        <TrashIcon className="w-5 h-5" />
+                                    </button>
                                 </div>
-                                <button onClick={() => handleDelete(file.id)} className="p-1 text-slate-500 hover:text-rose-400 rounded-md"><TrashIcon className="w-5 h-5"/></button>
                             </div>
                         </div>
                     ))}
@@ -1056,6 +1349,9 @@ const AssetsView: React.FC<{ user: User, onUpgrade: () => void, t: typeof transl
     const [assets, setAssets] = useLocalStorage<Asset[]>('finalmessage_assets', mockAssets);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [showPremiumModal, setShowPremiumModal] = useState(false);
+    const [viewingAsset, setViewingAsset] = useState<Asset | null>(null);
+    const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
     const handleSave = (newAsset: Omit<Asset, 'id'>) => {
         // FIX: Add type assertion as TypeScript fails to infer the correct discriminated union type after spreading.
@@ -1066,6 +1362,20 @@ const AssetsView: React.FC<{ user: User, onUpgrade: () => void, t: typeof transl
     
     const handleDelete = (id: string) => {
         setAssets(assets => assets.filter(a => a.id !== id));
+        setShowDeleteConfirm(null);
+    };
+    
+    const handleView = (asset: Asset) => {
+        setViewingAsset(asset);
+    };
+    
+    const handleEdit = (asset: Asset) => {
+        setEditingAsset(asset);
+    };
+    
+    const handleEditSave = (updatedAsset: Asset) => {
+        setAssets(prev => prev.map(a => a.id === updatedAsset.id ? updatedAsset : a));
+        setEditingAsset(null);
     };
     
     const getAssetIcon = (type: AssetType) => {
@@ -1099,27 +1409,159 @@ const AssetsView: React.FC<{ user: User, onUpgrade: () => void, t: typeof transl
                     <h3 className="mt-4 text-lg font-semibold text-white">{t.noAssets}</h3>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {assets.map(asset => (
-                         <div key={asset.id} className="bg-slate-800/50 p-4 rounded-lg border border-slate-700/50">
-                             <div className="flex items-start gap-3">
-                                 <div className="p-2 bg-slate-700 rounded-md mt-1">{getAssetIcon(asset.type)}</div>
-                                 <div className="flex-1">
-                                     <div className="flex items-center gap-2">
-                                        <p className="font-semibold text-white truncate">{asset.name}</p>
-                                        {asset.password && <LockClosedIcon className="w-4 h-4 text-slate-500" title="Password protected"/>}
-                                     </div>
-                                     <p className="text-xs text-slate-400">{asset.type === 'BankAccount' ? t.bankAccount : asset.type === 'CryptoWallet' ? t.cryptoWallet : t.secretNote}</p>
-                                 </div>
-                                 <button onClick={() => handleDelete(asset.id)} className="p-1 text-slate-500 hover:text-rose-400 rounded-md"><TrashIcon className="w-5 h-5"/></button>
-                             </div>
-                         </div>
-                    ))}
+                <div className="space-y-4">
+                    {assets.map(asset => {
+                        try {
+                            const security = getSecurityLevel(asset.importance || 'low');
+                            const parsedTags = parseHashtags(asset.tags || []);
+                        
+                        return (
+                            <div key={asset.id} className="bg-slate-800/50 p-4 rounded-lg border border-slate-700/50 hover:border-slate-600/50 transition-colors">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-start gap-3 flex-1">
+                                        <div className="p-2 bg-slate-700 rounded-md flex-shrink-0">
+                                            {getAssetIcon(asset.type)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <h3 className="font-semibold text-white truncate">{asset.name}</h3>
+                                                {asset.isLocked && <LockClosedIcon className="w-4 h-4 text-amber-400" title="잠금됨"/>}
+                                                <div className={`px-2 py-0.5 text-xs font-medium rounded-full ${security?.color === 'text-red-400' ? 'bg-red-500/20 text-red-400' : security?.color === 'text-amber-400' ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'}`}>
+                                                    {asset.importance === 'high' ? '높음' : asset.importance === 'medium' ? '중간' : '낮음'}
+                                                </div>
+                                            </div>
+
+                                            {/* 해시태그 */}
+                                            <div className="flex flex-wrap gap-1 mb-3">
+                                                {parsedTags.map((tagObj, idx) => (
+                                                    <span key={idx} className={`px-2 py-0.5 text-xs font-medium rounded-full ${tagObj.color}`}>
+                                                        #{tagObj.tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+
+                                            {/* 자산별 마스킹된 정보 */}
+                                            <div className="space-y-1 text-sm">
+                                                {asset.type === 'BankAccount' && (
+                                                    <>
+                                                        <div className="text-slate-300">
+                                                            <span className="text-slate-500">은행:</span> {asset.bankName}
+                                                        </div>
+                                                        <div className="text-slate-300">
+                                                            <span className="text-slate-500">계좌:</span> {asset.maskedView ? maskAccountNumber(asset.accountNumber).masked : asset.accountNumber}
+                                                        </div>
+                                                        {asset.password && (
+                                                            <div className="text-slate-300">
+                                                                <span className="text-slate-500">비밀번호:</span> {maskPassword(asset.password).masked}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                                
+                                                {asset.type === 'CryptoWallet' && (
+                                                    <>
+                                                        <div className="text-slate-300">
+                                                            <span className="text-slate-500">코인:</span> {asset.cryptoName}
+                                                        </div>
+                                                        <div className="text-slate-300 font-mono text-xs">
+                                                            <span className="text-slate-500">주소:</span> {asset.maskedView ? maskCryptoAddress(asset.address).masked : asset.address}
+                                                        </div>
+                                                        <div className="text-slate-300">
+                                                            <span className="text-slate-500">시드:</span> {maskSeedPhrase(asset.seedPhrase).masked}
+                                                        </div>
+                                                        {asset.password && (
+                                                            <div className="text-slate-300">
+                                                                <span className="text-slate-500">비밀번호:</span> {maskPassword(asset.password).masked}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+
+                                                {asset.type === 'SecretNote' && (
+                                                    <div className="text-slate-300">
+                                                        <span className="text-slate-500">내용:</span> {asset.content.substring(0, 50)}...
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* 복구 이메일 */}
+                                            {asset.recoveryEmail && (
+                                                <div className="mt-2 text-xs text-slate-400">
+                                                    <span className="text-slate-500">복구:</span> {asset.recoveryEmail}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => handleView(asset)}
+                                            className="p-1.5 text-slate-400 hover:text-sky-400 rounded-md transition-colors"
+                                            title="보기"
+                                        >
+                                            <EyeIcon className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleEdit(asset)}
+                                            className="p-1.5 text-slate-400 hover:text-blue-400 rounded-md transition-colors"
+                                            title="편집"
+                                        >
+                                            <PencilIcon className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(asset.id)}
+                                            className="p-1.5 text-slate-400 hover:text-rose-400 rounded-md transition-colors"
+                                            title="삭제"
+                                        >
+                                            <TrashIcon className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                        } catch (error) {
+                            console.error('Asset render error:', error);
+                            return (
+                                <div key={asset.id} className="bg-red-900/20 p-4 rounded-lg border border-red-500/20">
+                                    <p className="text-red-400">자산을 표시하는 중 오류가 발생했습니다: {asset.name}</p>
+                                </div>
+                            );
+                        }
+                    })}
                 </div>
             )}
 
             {isAddModalOpen && <AddAssetModal onClose={() => setIsAddModalOpen(false)} onSave={handleSave} t={t} />}
             {showPremiumModal && <PremiumModal onClose={() => setShowPremiumModal(false)} onUpgrade={onUpgrade} t={t} />}
+            
+            {/* 자산 보기 모달 */}
+            {viewingAsset && (
+                <AssetViewModal 
+                    asset={viewingAsset} 
+                    onClose={() => setViewingAsset(null)} 
+                    t={t} 
+                />
+            )}
+            
+            {/* 자산 편집 모달 */}
+            {editingAsset && (
+                <AssetEditModal 
+                    asset={editingAsset} 
+                    onClose={() => setEditingAsset(null)} 
+                    onSave={handleEditSave}
+                    t={t} 
+                />
+            )}
+            
+            {/* 삭제 확인 모달 */}
+            {showDeleteConfirm && (
+                <DeleteConfirmModal
+                    assetName={assets.find(a => a.id === showDeleteConfirm)?.name || '자산'}
+                    onConfirm={() => handleDelete(showDeleteConfirm)}
+                    onCancel={() => setShowDeleteConfirm(null)}
+                    t={t}
+                />
+            )}
         </div>
     );
 };
@@ -1434,6 +1876,279 @@ interface ApplicationProps {
   onLogout: () => void;
 }
 
+// 자산 보기 모달
+const AssetViewModal: React.FC<{
+    asset: Asset;
+    onClose: () => void;
+    t: typeof translations['en'];
+}> = ({ asset, onClose, t }) => {
+    const parsedTags = parseHashtags(asset.tags || []);
+    const security = getSecurityLevel(asset.importance);
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto">
+                <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-white">자산 정보</h3>
+                        <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white rounded-md">
+                            <XMarkIcon className="w-5 h-5" />
+                        </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">이름</label>
+                            <div className="text-white">{asset.name}</div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">유형</label>
+                            <div className="text-slate-300">{asset.type === 'BankAccount' ? '은행계좌' : asset.type === 'CryptoWallet' ? '암호화폐 지갑' : '비밀 메모'}</div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">중요도</label>
+                            <div className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${security.color === 'text-red-400' ? 'bg-red-500/20 text-red-400' : security.color === 'text-amber-400' ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'}`}>
+                                {asset.importance === 'high' ? '높음' : asset.importance === 'medium' ? '중간' : '낮음'}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">해시태그</label>
+                            <div className="flex flex-wrap gap-1">
+                                {parsedTags.map((tagObj, idx) => (
+                                    <span key={idx} className={`px-2 py-0.5 text-xs font-medium rounded-full ${tagObj.color}`}>
+                                        #{tagObj.tag}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+
+                        {asset.type === 'BankAccount' && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-2">은행</label>
+                                    <div className="text-slate-300">{asset.bankName}</div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-2">계좌번호</label>
+                                    <div className="text-slate-300 font-mono">{asset.accountNumber}</div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-2">메모</label>
+                                    <div className="text-slate-300">{asset.notes}</div>
+                                </div>
+                            </>
+                        )}
+
+                        {asset.type === 'CryptoWallet' && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-2">암호화폐</label>
+                                    <div className="text-slate-300">{asset.cryptoName}</div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-2">주소</label>
+                                    <div className="text-slate-300 font-mono text-xs break-all">{asset.address}</div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-2">시드구문</label>
+                                    <div className="text-slate-300 font-mono text-xs">{asset.seedPhrase}</div>
+                                </div>
+                            </>
+                        )}
+
+                        {asset.type === 'SecretNote' && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">내용</label>
+                                <div className="text-slate-300 whitespace-pre-wrap">{asset.content}</div>
+                            </div>
+                        )}
+
+                        {asset.password && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">비밀번호</label>
+                                <div className="text-slate-300 font-mono">{asset.password}</div>
+                            </div>
+                        )}
+
+                        {asset.recoveryEmail && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">복구 이메일</label>
+                                <div className="text-slate-300">{asset.recoveryEmail}</div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// 자산 편집 모달
+const AssetEditModal: React.FC<{
+    asset: Asset;
+    onClose: () => void;
+    onSave: (asset: Asset) => void;
+    t: typeof translations['en'];
+}> = ({ asset, onClose, onSave, t }) => {
+    const [editedAsset, setEditedAsset] = useState<Asset>({ ...asset });
+
+    const handleSave = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave(editedAsset);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto">
+                <form onSubmit={handleSave}>
+                    <div className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-white">자산 편집</h3>
+                            <button type="button" onClick={onClose} className="p-1.5 text-slate-400 hover:text-white rounded-md">
+                                <XMarkIcon className="w-5 h-5" />
+                            </button>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">이름</label>
+                                <input
+                                    type="text"
+                                    value={editedAsset.name}
+                                    onChange={(e) => setEditedAsset(prev => ({ ...prev, name: e.target.value }))}
+                                    className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">중요도</label>
+                                <select
+                                    value={editedAsset.importance}
+                                    onChange={(e) => setEditedAsset(prev => ({ ...prev, importance: e.target.value as 'high' | 'medium' | 'low' }))}
+                                    className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white"
+                                >
+                                    <option value="low">낮음</option>
+                                    <option value="medium">중간</option>
+                                    <option value="high">높음</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">해시태그 (쉼표로 구분)</label>
+                                <input
+                                    type="text"
+                                    value={editedAsset.tags.join(', ')}
+                                    onChange={(e) => setEditedAsset(prev => ({ ...prev, tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean) }))}
+                                    className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white"
+                                    placeholder="#주계좌, #비상금"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">비밀번호</label>
+                                <input
+                                    type="password"
+                                    value={editedAsset.password || ''}
+                                    onChange={(e) => setEditedAsset(prev => ({ ...prev, password: e.target.value || undefined }))}
+                                    className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white"
+                                    placeholder="선택사항"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">복구 이메일</label>
+                                <input
+                                    type="email"
+                                    value={editedAsset.recoveryEmail || ''}
+                                    onChange={(e) => setEditedAsset(prev => ({ ...prev, recoveryEmail: e.target.value || undefined }))}
+                                    className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white"
+                                    placeholder="선택사항"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="isLocked"
+                                    checked={editedAsset.isLocked}
+                                    onChange={(e) => setEditedAsset(prev => ({ ...prev, isLocked: e.target.checked }))}
+                                    className="rounded"
+                                />
+                                <label htmlFor="isLocked" className="text-sm text-slate-300">잠금 설정</label>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 mt-6">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                type="submit"
+                                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-md transition-colors"
+                            >
+                                저장
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+// 삭제 확인 모달
+const DeleteConfirmModal: React.FC<{
+    assetName: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+    t: typeof translations['en'];
+}> = ({ assetName, onConfirm, onCancel, t }) => {
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-sm">
+                <div className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-red-500/20 rounded-full">
+                            <TrashIcon className="w-5 h-5 text-red-400" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-white">자산 삭제</h3>
+                            <p className="text-sm text-slate-400">이 작업은 되돌릴 수 없습니다</p>
+                        </div>
+                    </div>
+                    
+                    <p className="text-slate-300 mb-6">
+                        <span className="font-semibold">{assetName}</span>을(를) 정말로 삭제하시겠습니까?
+                    </p>
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={onCancel}
+                            className="flex-1 px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
+                        >
+                            취소
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+                        >
+                            삭제
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const Application: React.FC<ApplicationProps> = ({ language, user, setUser, onLogout }) => {
     const [activeTab, setActiveTab] = useLocalStorage('finalmessage_activeTab', 'home');
     const t = translations[language];
@@ -1455,7 +2170,7 @@ const Application: React.FC<ApplicationProps> = ({ language, user, setUser, onLo
     const renderView = () => {
         switch(activeTab) {
             case 'home': return <HomeView user={user} setActiveTab={setActiveTab} t={t} />;
-            case 'message': return <MessageView user={user} onUpgrade={handleUpgrade} language={language} t={t} />;
+            case 'message': return <MessageManager language={language} onUpgrade={handleUpgrade} />;
             case 'multimedia': return <MultimediaView user={user} onUpgrade={handleUpgrade} t={t} />;
             case 'assets': return <AssetsView user={user} onUpgrade={handleUpgrade} t={t} />;
             case 'successors': return <SuccessorsView user={user} onUpgrade={handleUpgrade} t={t} />;

@@ -1,14 +1,13 @@
 
 import React, { useState } from 'react';
-import Dashboard from './views/Dashboard';
 import Application from './views/Application';
 import Landing from './views/Landing'; // Import the new Landing component
 import Partners from './views/Partners';
-import { DashboardIcon, ApplicationIcon } from './components/icons';
+import { NotificationSystem } from './components/NotificationSystem';
 import type { User } from './types'; // Import User type
 
 export type Language = 'en' | 'ko';
-export type View = 'dashboard' | 'application';
+export type View = 'application'; // 대시보드 제거, 애플리케이션만 사용
 export type PublicPage = 'landing' | 'partners';
 
 // Mock user for login simulation
@@ -45,28 +44,10 @@ const LanguageSwitcher: React.FC<{ language: Language; setLanguage: (lang: Langu
     </div>
 );
 
-const ViewSwitcher: React.FC<{ view: View; setView: (view: View) => void; language: Language }> = ({ view, setView, language }) => {
-    const tabs = [
-        { id: 'dashboard', icon: <DashboardIcon />, text: language === 'ko' ? '대시보드' : 'Dashboard' },
-        { id: 'application', icon: <ApplicationIcon />, text: language === 'ko' ? '애플리케이션' : 'Application' }
-    ];
-
-    return (
-        <div className="flex items-center bg-slate-800 border border-slate-700 rounded-full p-1 text-sm font-semibold">
-            {tabs.map(tab => (
-                 <button 
-                    key={tab.id}
-                    onClick={() => setView(tab.id as View)} 
-                    aria-pressed={view === tab.id} 
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors ${view === tab.id ? 'bg-sky-500 text-white' : 'text-slate-400 hover:bg-slate-700'}`}
-                >
-                    {tab.icon}
-                    <span>{tab.text}</span>
-                </button>
-            ))}
-        </div>
-    );
-};
+// ViewSwitcher는 더 이상 필요 없음 (애플리케이션만 남음)
+// const ViewSwitcher: React.FC<{ view: View; setView: (view: View) => void; language: Language }> = ({ view, setView, language }) => {
+//     return null; // 단일 애플리케이션 뷰만 사용
+// };
 
 
 const App: React.FC = () => {
@@ -125,14 +106,14 @@ const App: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-slate-900 text-gray-200 antialiased">
-            {/* The header is only shown if the view is dashboard, or if the user is logged into the application */}
-            {(view === 'dashboard' || (view === 'application' && user)) && (
+            {/* The header is only shown if the user is logged into the application */}
+            {user && (
                 <header className="sticky top-0 z-20 bg-slate-900/80 backdrop-blur-lg border-b border-slate-800">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex flex-col sm:flex-row items-center justify-between h-20 gap-4">
                             <div className="flex items-center gap-4">
                                 <h1 className="text-2xl font-bold text-white">FinalMessage</h1>
-                                <ViewSwitcher view={view} setView={setView} language={language} />
+                                {/* ViewSwitcher 제거 - 애플리케이션만 사용 */}
                             </div>
                             <LanguageSwitcher language={language} setLanguage={setLanguage} />
                         </div>
@@ -141,9 +122,12 @@ const App: React.FC = () => {
             )}
             
             <main>
-                {view === 'dashboard' && <Dashboard language={language} />}
-                {view === 'application' && renderApplicationView()}
+                {/* 대시보드 제거 - 애플리케이션만 렌더링 */}
+                {renderApplicationView()}
             </main>
+            
+            {/* Notification System */}
+            <NotificationSystem />
         </div>
     );
 };

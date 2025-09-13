@@ -1,12 +1,20 @@
 {
-  "name": "copy-of-finalmessage",
+  "name": "finalmessage",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:s3": "aws s3 sync dist/ s3://finalmessage-frontend --delete",
+    "deploy:frontend": "npm run build && npm run deploy:s3",
+    "backup": "bash scripts/backup.sh",
+    "backup:daily": "bash scripts/backup.sh daily",
+    "backup:pre-change": "bash scripts/backup.sh pre-change",
+    "restore": "bash scripts/restore.sh",
+    "safe-edit": "bash scripts/safe-edit.sh",
+    "protect": "echo '🛡️ 프로젝트 보호 시스템 활성화됨. PROJECT_PROTECTION.md 참조'"
   },
   "dependencies": {
     "@google/genai": "^1.16.0",
@@ -15,7 +23,11 @@
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
+    "@tailwindcss/forms": "^0.5.10",
     "@types/node": "^22.14.0",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

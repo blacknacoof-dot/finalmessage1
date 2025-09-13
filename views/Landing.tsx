@@ -94,12 +94,12 @@ const Landing: React.FC<LandingProps> = ({ language, onLogin, setPage }) => {
                         {t.subtitle}
                     </p>
                     <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-                        <button onClick={onLogin} className="px-8 py-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                        <a href="/login.html" className="px-8 py-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-lg transition-transform transform hover:scale-105 border-none text-center no-underline">
                             {t.getStarted}
-                        </button>
-                        <button onClick={onLogin} className="px-8 py-3 bg-slate-700/50 hover:bg-slate-700 text-slate-200 font-semibold rounded-lg transition-colors">
+                        </a>
+                        <a href="/login.html" className="px-8 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-colors border-none text-center no-underline">
                             {t.login}
-                        </button>
+                        </a>
                     </div>
                 </div>
             </header>

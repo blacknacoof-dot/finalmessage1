@@ -46,7 +46,7 @@ const Partners: React.FC<PartnersProps> = ({ language, setPage }) => {
             <header className="relative text-center py-24 sm:py-32 px-4 overflow-hidden">
                 <div className="absolute inset-0 bg-grid-slate-700/[0.05] [mask-image:linear-gradient(to_bottom,white_40%,transparent_90%)]"></div>
                 <div className="absolute top-8 left-8">
-                    <button onClick={() => setPage('landing')} className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-200 font-semibold rounded-lg transition-colors text-sm">
+                    <button onClick={() => setPage('landing')} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-colors text-sm border-none">
                         &larr; {t.backToHome}
                     </button>
                 </div>
@@ -134,7 +134,7 @@ const Partners: React.FC<PartnersProps> = ({ language, setPage }) => {
                         </div>
 
                         <div className="md:col-span-2 text-right">
-                            <button type="submit" className="inline-block px-8 py-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                            <button type="submit" className="inline-block px-8 py-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-lg transition-transform transform hover:scale-105 border-none">
                                 {t.contactForm.submitButton}
                             </button>
                         </div>

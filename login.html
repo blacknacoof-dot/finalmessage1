@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinalMessage - 로그인</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .container {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid #475569;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: #f1f5f9;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+
+        .language-toggle {
+            display: flex;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 50px;
+            padding: 4px;
+            margin: 0 auto 2rem;
+            width: fit-content;
+        }
+
+        .language-toggle button {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .language-toggle button.active {
+            background: #0ea5e9;
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: #cbd5e1;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(51, 65, 85, 0.5);
+            border: 1px solid #475569;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #64748b;
+        }
+
+        .social-buttons {
+            margin-bottom: 1.5rem;
+        }
+
+        .social-button {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .google-btn {
+            background: white;
+            color: #374151;
+        }
+
+        .google-btn:hover {
+            background: #f9fafb;
+        }
+
+        .kakao-btn {
+            background: #fee500;
+            color: #374151;
+        }
+
+        .kakao-btn:hover {
+            background: #fde047;
+        }
+
+        .naver-btn {
+            background: #03c75a;
+            color: white;
+        }
+
+        .naver-btn:hover {
+            background: #16a34a;
+        }
+
+        .divider {
+            position: relative;
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #475569;
+        }
+
+        .divider span {
+            background: rgba(30, 41, 59, 0.8);
+            color: #94a3b8;
+            padding: 0 1rem;
+            font-size: 0.875rem;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-bottom: 1rem;
+        }
+
+        .login-button:hover:not(:disabled) {
+            background: #0284c7;
+        }
+
+        .login-button:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
+
+        .toggle-form {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+
+        .toggle-form button {
+            background: none;
+            border: none;
+            color: #0ea5e9;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: inherit;
+        }
+
+        .toggle-form button:hover {
+            color: #0284c7;
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        .success-message {
+            color: #10b981;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        /* 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid #475569;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            padding: 2rem;
+            width: 100%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            color: #f1f5f9;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-header p {
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+
+        .privacy-content {
+            background: rgba(51, 65, 85, 0.3);
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            color: #cbd5e1;
+        }
+
+        .consent-section {
+            margin: 1.5rem 0;
+        }
+
+        .consent-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(51, 65, 85, 0.2);
+            border: 1px solid #475569;
+            border-radius: 8px;
+        }
+
+        .consent-item input[type="checkbox"] {
+            margin-right: 0.75rem;
+            margin-top: 0.125rem;
+            width: 16px;
+            height: 16px;
+            accent-color: #0ea5e9;
+        }
+
+        .consent-label {
+            flex: 1;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+
+        .consent-label strong {
+            color: #f1f5f9;
+        }
+
+        .consent-label .required {
+            color: #ef4444;
+        }
+
+        .consent-label .optional {
+            color: #94a3b8;
+        }
+
+        .view-terms-btn {
+            background: none;
+            border: 1px solid #0ea5e9;
+            color: #0ea5e9;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            margin-left: 8px;
+            transition: all 0.2s;
+        }
+
+        .view-terms-btn:hover {
+            background: #0ea5e9;
+            color: white;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-btn-cancel {
+            background: #475569;
+            color: #e2e8f0;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #64748b;
+        }
+
+        .modal-btn-confirm {
+            background: #0ea5e9;
+            color: white;
+        }
+
+        .modal-btn-confirm:hover:not(:disabled) {
+            background: #0284c7;
+        }
+
+        .modal-btn-confirm:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
+
+        .signup-form {
+            display: none;
+        }
+
+        .signup-form.show {
+            display: block;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .modal-content {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+
+            .modal-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>FinalMessage</h1>
+            <p id="subtitle">디지털 유산을 안전하게 전달하세요</p>
+        </div>
+
+        <div class="language-toggle">
+            <button id="lang-ko" class="active">한국어</button>
+            <button id="lang-en">English</button>
+        </div>
+
+        <form id="loginForm">
+            <div class="social-buttons">
+                <button type="button" class="social-button google-btn" id="googleLogin">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <span id="google-text">Google로 계속하기</span>
+                </button>
+
+                <button type="button" class="social-button kakao-btn" id="kakaoLogin">
+                    <span style="font-weight: bold; font-size: 18px;">K</span>
+                    <span id="kakao-text">Kakao로 계속하기</span>
+                </button>
+
+                <button type="button" class="social-button naver-btn" id="naverLogin">
+                    <span style="font-weight: bold; font-size: 18px;">N</span>
+                    <span id="naver-text">Naver로 계속하기</span>
+                </button>
+            </div>
+
+            <div class="divider">
+                <span id="divider-text">또는</span>
+            </div>
+
+            <div class="form-group">
+                <label for="email" id="email-label">이메일</label>
+                <input type="email" id="email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password" id="password-label">비밀번호</label>
+                <input type="password" id="password" required>
+            </div>
+
+            <button type="submit" class="login-button" id="login-btn">로그인</button>
+
+            <div id="error-message" class="error-message" style="display: none;"></div>
+            <div id="success-message" class="success-message" style="display: none;"></div>
+
+            <div class="toggle-form">
+                <span id="toggle-text">계정이 없으신가요?</span>
+                <button type="button" id="toggle-btn">회원가입</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 개인정보 동의 모달 -->
+    <div id="privacyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="privacy-title">개인정보 처리방침 동의</h2>
+                <p id="privacy-subtitle">FinalMessage 서비스 이용을 위해 개인정보 수집 및 이용에 동의해주세요.</p>
+            </div>
+
+            <div class="consent-section">
+                <div class="consent-item">
+                    <input type="checkbox" id="termsConsent">
+                    <label for="termsConsent" class="consent-label">
+                        <strong>서비스 이용약관 동의 <span class="required">(필수)</span></strong><br>
+                        FinalMessage 서비스 이용에 관한 기본 약관에 동의합니다.
+                        <button type="button" class="view-terms-btn" onclick="viewTermsDetails('terms')">약관보기</button>
+                    </label>
+                </div>
+
+                <div class="consent-item">
+                    <input type="checkbox" id="privacyConsent">
+                    <label for="privacyConsent" class="consent-label">
+                        <strong>개인정보 수집 및 이용 동의 <span class="required">(필수)</span></strong><br>
+                        서비스 제공을 위한 개인정보 수집 및 이용에 동의합니다.
+                        <button type="button" class="view-terms-btn" onclick="viewTermsDetails('privacy')">정책보기</button>
+                    </label>
+                </div>
+
+                <div class="consent-item">
+                    <input type="checkbox" id="marketingConsent">
+                    <label for="marketingConsent" class="consent-label">
+                        <strong>마케팅 정보 수신 동의 <span class="optional">(선택)</span></strong><br>
+                        이벤트, 혜택 등의 마케팅 정보 수신에 동의합니다.
+                        <button type="button" class="view-terms-btn" onclick="viewTermsDetails('marketing')">내용보기</button>
+                    </label>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="modal-btn modal-btn-cancel" id="cancelConsent">취소</button>
+                <button type="button" class="modal-btn modal-btn-confirm" id="confirmConsent" disabled>동의 후 계속</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 회원가입 폼 모달 -->
+    <div id="signupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="signup-title">회원가입</h2>
+                <p id="signup-subtitle">FinalMessage에 오신 것을 환영합니다!</p>
+            </div>
+
+            <form id="signupForm" class="signup-form show">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="signup-name" id="signup-name-label">성함</label>
+                        <input type="text" id="signup-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-phone" id="signup-phone-label">휴대폰</label>
+                        <input type="tel" id="signup-phone" placeholder="010-1234-5678" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="signup-email" id="signup-email-label">이메일</label>
+                    <input type="email" id="signup-email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="signup-password" id="signup-password-label">비밀번호</label>
+                    <input type="password" id="signup-password" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="signup-confirm-password" id="signup-confirm-password-label">비밀번호 확인</label>
+                    <input type="password" id="signup-confirm-password" required>
+                </div>
+
+                <div id="signup-error-message" class="error-message" style="display: none;"></div>
+                <div id="signup-success-message" class="success-message" style="display: none;"></div>
+
+                <div class="modal-actions">
+                    <button type="button" class="modal-btn modal-btn-cancel" id="cancelSignup">취소</button>
+                    <button type="submit" class="modal-btn modal-btn-confirm" id="submitSignup">가입 완료</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 약관 상세 모달 -->
+    <div id="termsDetailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="terms-detail-title">서비스 이용약관</h2>
+            </div>
+
+            <div class="privacy-content" id="terms-detail-content">
+                <!-- 약관 내용이 동적으로 로드됩니다 -->
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="modal-btn modal-btn-cancel" id="closeTermsDetail">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 다국어 지원
+        const translations = {
+            ko: {
+                subtitle: '디지털 유산을 안전하게 전달하세요',
+                googleText: 'Google로 계속하기',
+                kakaoText: 'Kakao로 계속하기',
+                naverText: 'Naver로 계속하기',
+                dividerText: '또는',
+                emailLabel: '이메일',
+                passwordLabel: '비밀번호',
+                loginBtn: '로그인',
+                toggleText: '계정이 없으신가요?',
+                toggleBtn: '회원가입',
+                signupToggleText: '이미 계정이 있으신가요?',
+                signupToggleBtn: '로그인',
+                signupBtn: '가입하기',
+                nameLabel: '이름'
+            },
+            en: {
+                subtitle: 'Securely deliver your digital legacy',
+                googleText: 'Continue with Google',
+                kakaoText: 'Continue with Kakao',
+                naverText: 'Continue with Naver',
+                dividerText: 'or',
+                emailLabel: 'Email',
+                passwordLabel: 'Password',
+                loginBtn: 'Log In',
+                toggleText: "Don't have an account?",
+                toggleBtn: 'Sign up',
+                signupToggleText: 'Already have an account?',
+                signupToggleBtn: 'Log in',
+                signupBtn: 'Sign Up',
+                nameLabel: 'Name'
+            }
+        };
+
+        let currentLang = 'ko';
+        let isLoginMode = true;
+        let isLoading = false;
+
+        // 모달 관련 변수
+        let privacyModal, signupModal;
+        let requiredConsentChecked = false;
+
+        // DOM 요소들
+        const elements = {
+            subtitle: document.getElementById('subtitle'),
+            googleText: document.getElementById('google-text'),
+            kakaoText: document.getElementById('kakao-text'),
+            naverText: document.getElementById('naver-text'),
+            dividerText: document.getElementById('divider-text'),
+            emailLabel: document.getElementById('email-label'),
+            passwordLabel: document.getElementById('password-label'),
+            loginBtn: document.getElementById('login-btn'),
+            toggleText: document.getElementById('toggle-text'),
+            toggleBtn: document.getElementById('toggle-btn'),
+            langKo: document.getElementById('lang-ko'),
+            langEn: document.getElementById('lang-en'),
+            form: document.getElementById('loginForm'),
+            errorMessage: document.getElementById('error-message'),
+            successMessage: document.getElementById('success-message')
+        };
+
+        // 언어 변경
+        function updateLanguage(lang) {
+            currentLang = lang;
+            const t = translations[lang];
+            
+            elements.subtitle.textContent = t.subtitle;
+            elements.googleText.textContent = t.googleText;
+            elements.kakaoText.textContent = t.kakaoText;
+            elements.naverText.textContent = t.naverText;
+            elements.dividerText.textContent = t.dividerText;
+            elements.emailLabel.textContent = t.emailLabel;
+            elements.passwordLabel.textContent = t.passwordLabel;
+            
+            updateFormMode();
+            
+            // 언어 버튼 상태 업데이트
+            elements.langKo.classList.toggle('active', lang === 'ko');
+            elements.langEn.classList.toggle('active', lang === 'en');
+        }
+
+        // 로그인/회원가입 모드 전환
+        function updateFormMode() {
+            const t = translations[currentLang];
+            
+            if (isLoginMode) {
+                elements.loginBtn.textContent = t.loginBtn;
+                elements.toggleText.textContent = t.toggleText;
+                elements.toggleBtn.textContent = t.toggleBtn;
+                
+                // 이름 필드 제거
+                const nameGroup = document.getElementById('name-group');
+                if (nameGroup) {
+                    nameGroup.remove();
+                }
+            } else {
+                elements.loginBtn.textContent = t.signupBtn;
+                elements.toggleText.textContent = t.signupToggleText;
+                elements.toggleBtn.textContent = t.signupToggleBtn;
+                
+                // 이름 필드 추가
+                if (!document.getElementById('name-group')) {
+                    const nameGroup = document.createElement('div');
+                    nameGroup.className = 'form-group';
+                    nameGroup.id = 'name-group';
+                    nameGroup.innerHTML = `
+                        <label for="name" id="name-label">${t.nameLabel}</label>
+                        <input type="text" id="name" required>
+                    `;
+                    
+                    const emailGroup = document.querySelector('#email').parentElement;
+                    emailGroup.parentNode.insertBefore(nameGroup, emailGroup);
+                }
+            }
+        }
+
+        // 메시지 표시
+        function showMessage(message, type) {
+            hideMessages();
+            const messageEl = type === 'error' ? elements.errorMessage : elements.successMessage;
+            messageEl.textContent = message;
+            messageEl.style.display = 'block';
+            
+            // 3초 후 자동 숨김
+            setTimeout(hideMessages, 3000);
+        }
+
+        function hideMessages() {
+            elements.errorMessage.style.display = 'none';
+            elements.successMessage.style.display = 'none';
+        }
+
+        // 로딩 상태
+        function setLoading(loading) {
+            isLoading = loading;
+            document.body.classList.toggle('loading', loading);
+            elements.loginBtn.disabled = loading;
+            elements.loginBtn.textContent = loading ? 
+                (currentLang === 'ko' ? '처리 중...' : 'Loading...') :
+                (isLoginMode ? translations[currentLang].loginBtn : translations[currentLang].signupBtn);
+        }
+
+        // 폼 제출
+        function handleSubmit(e) {
+            e.preventDefault();
+            if (isLoading) return;
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const name = !isLoginMode ? document.getElementById('name')?.value : '';
+
+            if (!email || !password) {
+                showMessage(currentLang === 'ko' ? '모든 필드를 입력해주세요.' : 'Please fill in all fields.', 'error');
+                return;
+            }
+
+            if (!isLoginMode && !name) {
+                showMessage(currentLang === 'ko' ? '이름을 입력해주세요.' : 'Please enter your name.', 'error');
+                return;
+            }
+
+            setLoading(true);
+
+            if (isLoginMode) {
+                // 실제 로그인 API 호출
+                fetch('https://finalmessage-backend.loca.lt/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    setLoading(false);
+                    
+                    if (data.success) {
+                        showMessage(currentLang === 'ko' ? '로그인 성공!' : 'Login successful!', 'success');
+                        
+                        // 로그인 정보를 localStorage에 저장 (기존 앱이 읽을 수 있도록)
+                        const loggedInUser = {
+                            id: data.user.id,
+                            name: data.user.name || 'User',
+                            email: data.user.email,
+                            phone: data.user.phone,
+                            plan: 'Free',
+                            subscription: null,
+                            token: data.token
+                        };
+                        localStorage.setItem('finalmessage_user', JSON.stringify(loggedInUser));
+                        localStorage.setItem('finalmessage_token', data.token);
+                        
+                        setTimeout(() => {
+                            // 기존 React 앱으로 리디렉션
+                            window.location.href = './index.html';
+                        }, 1000);
+                    } else {
+                        showMessage(data.message || '로그인에 실패했습니다.', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Login error:', error);
+                    setLoading(false);
+                    showMessage('서버 연결에 실패했습니다. 다시 시도해주세요.', 'error');
+                });
+            }
+        }
+
+        // 소셜 로그인
+        function handleSocialLogin(provider) {
+            if (isLoading) return;
+            
+            setLoading(true);
+            
+            // 실제 소셜 로그인 시뮬레이션 (개발용)
+            // 실제 배포시에는 각 소셜 플랫폼의 SDK를 사용해야 합니다
+            const mockSocialData = {
+                google: {
+                    socialId: 'google_' + Date.now(),
+                    email: 'user@gmail.com',
+                    name: 'Google User'
+                },
+                kakao: {
+                    socialId: 'kakao_' + Date.now(),
+                    email: 'user@kakao.com',
+                    name: 'Kakao User'
+                },
+                naver: {
+                    socialId: 'naver_' + Date.now(),
+                    email: 'user@naver.com',
+                    name: 'Naver User'
+                }
+            };
+
+            const socialData = mockSocialData[provider.toLowerCase()];
+            
+            // 백엔드 소셜 로그인 API 호출
+            fetch('https://finalmessage-backend.loca.lt/api/auth/social-login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    provider: provider.toLowerCase(),
+                    email: socialData.email,
+                    name: socialData.name,
+                    socialId: socialData.socialId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                setLoading(false);
+                
+                if (data.success) {
+                    showMessage(currentLang === 'ko' ? `${provider} 로그인 성공!` : `${provider} login successful!`, 'success');
+                    
+                    // 로그인 정보를 localStorage에 저장
+                    const socialUser = {
+                        id: data.user.id,
+                        name: data.user.name,
+                        email: data.user.email,
+                        provider: data.user.provider,
+                        plan: 'Free',
+                        subscription: null,
+                        token: data.token
+                    };
+                    localStorage.setItem('finalmessage_user', JSON.stringify(socialUser));
+                    localStorage.setItem('finalmessage_token', data.token);
+                    
+                    setTimeout(() => {
+                        // 기존 React 앱으로 리디렉션
+                        window.location.href = './index.html';
+                    }, 1000);
+                } else {
+                    showMessage(data.message || '소셜 로그인에 실패했습니다.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Social login error:', error);
+                setLoading(false);
+                showMessage('서버 연결에 실패했습니다. 다시 시도해주세요.', 'error');
+            });
+        }
+
+        // 이벤트 리스너
+        elements.langKo.addEventListener('click', () => updateLanguage('ko'));
+        elements.langEn.addEventListener('click', () => updateLanguage('en'));
+        elements.toggleBtn.addEventListener('click', () => {
+            if (!isLoginMode) {
+                // 로그인 모드로 전환
+                isLoginMode = true;
+                updateFormMode();
+                hideMessages();
+            } else {
+                // 회원가입 모드: 개인정보 동의 모달 열기
+                openPrivacyModal();
+            }
+        });
+        elements.form.addEventListener('submit', handleSubmit);
+
+        // 소셜 로그인 이벤트
+        document.getElementById('googleLogin').addEventListener('click', () => handleSocialLogin('Google'));
+        document.getElementById('kakaoLogin').addEventListener('click', () => handleSocialLogin('Kakao'));
+        document.getElementById('naverLogin').addEventListener('click', () => handleSocialLogin('Naver'));
+
+        // 모달 관련 함수들
+        function openPrivacyModal() {
+            privacyModal = document.getElementById('privacyModal');
+            privacyModal.classList.add('show');
+        }
+
+        function closePrivacyModal() {
+            if (privacyModal) {
+                privacyModal.classList.remove('show');
+            }
+        }
+
+        function openSignupModal() {
+            signupModal = document.getElementById('signupModal');
+            signupModal.classList.add('show');
+        }
+
+        function closeSignupModal() {
+            if (signupModal) {
+                signupModal.classList.remove('show');
+            }
+        }
+
+        // 필수 약관 동의 체크
+        function updateConsentButton() {
+            const termsConsent = document.getElementById('termsConsent');
+            const privacyConsent = document.getElementById('privacyConsent');
+            const confirmBtn = document.getElementById('confirmConsent');
+            
+            if (termsConsent && privacyConsent && confirmBtn) {
+                confirmBtn.disabled = !(termsConsent.checked && privacyConsent.checked);
+            }
+        }
+
+        // 약관 상세 내용
+        const termsContent = {
+            terms: {
+                title: '서비스 이용약관',
+                content: `
+                    <h4>제1조 (목적)</h4>
+                    <p>본 약관은 FinalMessage(이하 "회사")가 제공하는 디지털 유산 관리 서비스의 이용과 관련하여 회사와 이용자의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.</p>
+                    
+                    <h4>제2조 (정의)</h4>
+                    <p>1. "서비스"란 회사가 제공하는 디지털 유산 관리, 메시지 전달, 상속자 지정 등의 서비스를 의미합니다.</p>
+                    <p>2. "이용자"란 본 약관에 따라 회사의 서비스를 받는 회원 및 비회원을 말합니다.</p>
+                    <p>3. "회원"이란 회사에 개인정보를 제공하여 회원등록을 한 자로서, 회사의 서비스를 지속적으로 이용할 수 있는 자를 말합니다.</p>
+                    
+                    <h4>제3조 (약관의 효력 및 변경)</h4>
+                    <p>1. 본 약관은 서비스 화면에 게시하거나 기타의 방법으로 회원에게 공지함으로써 효력이 발생합니다.</p>
+                    <p>2. 회사는 합리적인 사유가 발생할 경우 본 약관을 수정할 수 있으며, 약관이 변경되는 경우 변경된 약관의 적용일자 및 변경사유를 명시하여 현행약관과 함께 서비스 초기화면에 그 적용일자 7일 이전부터 적용일자 전일까지 공지합니다.</p>
+                    
+                    <h4>제4조 (서비스의 제공 및 변경)</h4>
+                    <p>1. 회사는 다음과 같은 업무를 수행합니다:</p>
+                    <p>- 디지털 유산 관리 및 보관</p>
+                    <p>- 메시지 작성 및 전달</p>
+                    <p>- 상속자 지정 및 관리</p>
+                    <p>- 기타 회사가 정하는 업무</p>
+                    
+                    <h4>제5조 (서비스 이용시간)</h4>
+                    <p>서비스 이용은 회사의 업무상 또는 기술상 특별한 지장이 없는 한 연중무휴, 1일 24시간 운영을 원칙으로 합니다.</p>
+                `
+            },
+            privacy: {
+                title: '개인정보 처리방침',
+                content: `
+                    <h4>개인정보 수집 및 이용</h4>
+                    <p><strong>수집 목적:</strong> FinalMessage 서비스 제공, 고객 지원, 서비스 개선</p>
+                    <p><strong>수집 항목:</strong></p>
+                    <p>- 필수항목: 이름, 이메일 주소, 전화번호</p>
+                    <p>- 선택항목: 프로필 사진, 생년월일</p>
+                    <p><strong>수집 방법:</strong> 회원가입 시 직접 입력, 서비스 이용 과정에서 자동 수집</p>
+                    
+                    <h4>개인정보 보유 및 이용기간</h4>
+                    <p>- 회원 탈퇴 시까지 보유</p>
+                    <p>- 관련 법령에 따른 보관 의무기간이 있는 경우 해당 기간까지 보관</p>
+                    
+                    <h4>개인정보 제3자 제공</h4>
+                    <p>회사는 원칙적으로 이용자의 개인정보를 외부에 제공하지 않습니다. 다만, 다음의 경우에는 예외로 합니다:</p>
+                    <p>- 이용자가 사전에 동의한 경우</p>
+                    <p>- 법령의 규정에 의거하거나, 수사 목적으로 법령에 정해진 절차와 방법에 따라 수사기관의 요구가 있는 경우</p>
+                    
+                    <h4>개인정보 처리 위탁</h4>
+                    <p>회사는 서비스 향상을 위해서 아래와 같이 개인정보를 위탁하고 있으며, 관계 법령에 따라 위탁계약 시 개인정보가 안전하게 관리될 수 있도록 필요한 사항을 규정하고 있습니다.</p>
+                    
+                    <h4>정보주체의 권리</h4>
+                    <p>이용자는 언제든지 다음과 같은 권리를 행사할 수 있습니다:</p>
+                    <p>- 개인정보 열람 요구</p>
+                    <p>- 오류 등이 있을 경우 정정 요구</p>
+                    <p>- 삭제 요구</p>
+                    <p>- 처리정지 요구</p>
+                `
+            },
+            marketing: {
+                title: '마케팅 정보 수신 동의',
+                content: `
+                    <h4>마케팅 정보 수신 동의 (선택)</h4>
+                    <p>회사는 서비스 향상 및 이용자 맞춤 서비스 제공을 위하여 마케팅 정보를 제공할 수 있습니다.</p>
+                    
+                    <h4>수신하는 정보의 종류</h4>
+                    <p>- 신규 서비스 및 이벤트 안내</p>
+                    <p>- 할인 혜택 및 쿠폰 정보</p>
+                    <p>- 서비스 업데이트 안내</p>
+                    <p>- 맞춤형 콘텐츠 추천</p>
+                    
+                    <h4>정보 제공 방법</h4>
+                    <p>- 이메일</p>
+                    <p>- SMS/MMS</p>
+                    <p>- 앱 푸시 알림</p>
+                    <p>- 서비스 내 알림</p>
+                    
+                    <h4>수신 거부</h4>
+                    <p>마케팅 정보 수신을 원하지 않으실 경우 다음과 같은 방법으로 수신을 거부하실 수 있습니다:</p>
+                    <p>- 마이페이지에서 직접 설정 변경</p>
+                    <p>- 이메일 하단의 수신거부 링크 클릭</p>
+                    <p>- 고객센터를 통한 수신거부 요청</p>
+                    
+                    <h4>참고사항</h4>
+                    <p>본 동의는 선택사항이며, 동의하지 않으셔도 서비스 이용에 제한은 없습니다.</p>
+                    <p>마케팅 정보 수신 동의 후에도 언제든지 철회하실 수 있습니다.</p>
+                `
+            }
+        };
+
+        // 약관 상세보기 함수
+        function viewTermsDetails(type) {
+            const modal = document.getElementById('termsDetailModal');
+            const title = document.getElementById('terms-detail-title');
+            const content = document.getElementById('terms-detail-content');
+            
+            const terms = termsContent[type];
+            title.textContent = terms.title;
+            content.innerHTML = terms.content;
+            
+            modal.classList.add('show');
+        }
+
+        // 약관 상세 모달 닫기
+        function closeTermsDetailModal() {
+            const modal = document.getElementById('termsDetailModal');
+            modal.classList.remove('show');
+        }
+
+        // 회원가입 폼 제출
+        function handleSignupSubmit(e) {
+            e.preventDefault();
+            if (isLoading) return;
+
+            const name = document.getElementById('signup-name').value;
+            const phone = document.getElementById('signup-phone').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
+
+            const errorEl = document.getElementById('signup-error-message');
+            const successEl = document.getElementById('signup-success-message');
+
+            // 폼 검증
+            if (!name || !phone || !email || !password || !confirmPassword) {
+                showSignupMessage('모든 필드를 입력해주세요.', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showSignupMessage('비밀번호가 일치하지 않습니다.', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showSignupMessage('비밀번호는 6자 이상이어야 합니다.', 'error');
+                return;
+            }
+
+            // 전화번호 형식 검증
+            const phoneRegex = /^01[016789]-?\d{3,4}-?\d{4}$/;
+            if (!phoneRegex.test(phone.replace(/-/g, ''))) {
+                showSignupMessage('올바른 휴대폰 번호 형식이 아닙니다.', 'error');
+                return;
+            }
+
+            setSignupLoading(true);
+
+            // 실제 백엔드 API 회원가입 처리
+            fetch('https://finalmessage-backend.loca.lt/api/auth/signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    password: password,
+                    phone: phone
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                setSignupLoading(false);
+                
+                if (data.success) {
+                    showSignupMessage('회원가입이 완료되었습니다!', 'success');
+                    
+                    setTimeout(() => {
+                        closeSignupModal();
+                        
+                        // 회원가입 성공 후 로그인 처리
+                        const newUser = {
+                            id: data.user.id,
+                            name: name,
+                            email: email,
+                            phone: phone,
+                            plan: 'Free',
+                            subscription: null
+                        };
+                        localStorage.setItem('finalmessage_user', JSON.stringify(newUser));
+                        
+                        // React 앱으로 리디렉션
+                        setTimeout(() => {
+                            window.location.href = './index.html';
+                        }, 500);
+                    }, 1500);
+                } else {
+                    showSignupMessage(data.message || '회원가입에 실패했습니다.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Signup error:', error);
+                setSignupLoading(false);
+                showSignupMessage('서버 연결에 실패했습니다. 다시 시도해주세요.', 'error');
+            });
+        }
+
+        // 회원가입 메시지 표시
+        function showSignupMessage(message, type) {
+            const errorEl = document.getElementById('signup-error-message');
+            const successEl = document.getElementById('signup-success-message');
+            
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+            
+            const messageEl = type === 'error' ? errorEl : successEl;
+            messageEl.textContent = message;
+            messageEl.style.display = 'block';
+            
+            if (type === 'error') {
+                setTimeout(() => {
+                    errorEl.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // 회원가입 로딩 상태
+        function setSignupLoading(loading) {
+            const submitBtn = document.getElementById('submitSignup');
+            submitBtn.disabled = loading;
+            submitBtn.textContent = loading ? '처리 중...' : '가입 완료';
+        }
+
+        // 모달 이벤트 리스너 초기화
+        function initModalListeners() {
+            // 약관 동의 모달
+            document.getElementById('termsConsent').addEventListener('change', updateConsentButton);
+            document.getElementById('privacyConsent').addEventListener('change', updateConsentButton);
+            document.getElementById('marketingConsent').addEventListener('change', updateConsentButton);
+            
+            document.getElementById('cancelConsent').addEventListener('click', closePrivacyModal);
+            document.getElementById('confirmConsent').addEventListener('click', () => {
+                closePrivacyModal();
+                openSignupModal();
+            });
+
+            // 약관 상세 모달
+            document.getElementById('closeTermsDetail').addEventListener('click', closeTermsDetailModal);
+
+            // 회원가입 모달
+            document.getElementById('cancelSignup').addEventListener('click', closeSignupModal);
+            document.getElementById('signupForm').addEventListener('submit', handleSignupSubmit);
+
+            // 모달 외부 클릭시 닫기
+            document.getElementById('privacyModal').addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) {
+                    closePrivacyModal();
+                }
+            });
+
+            document.getElementById('signupModal').addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) {
+                    closeSignupModal();
+                }
+            });
+
+            document.getElementById('termsDetailModal').addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) {
+                    closeTermsDetailModal();
+                }
+            });
+        }
+
+        // 초기화
+        updateLanguage('ko');
+        initModalListeners();
+    </script>
+</body>
+</html>
