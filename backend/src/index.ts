@@ -157,4 +157,10 @@ const startServer = async () => {
   }
 };
 
-startServer();
+// Only start server in non-lambda environment
+if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  startServer();
+}
+
+// Export app for Lambda
+export default app;

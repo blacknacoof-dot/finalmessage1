@@ -1,20 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(\"C:\\Program Files\\Amazon\\AWSCLIV2\\aws.exe\" ec2 create-security-group --group-name finalmessage-backend-sg --description \"Security group for FinalMessage backend\" --region ap-northeast-2)",
-      "Bash(\"C:\\Program Files\\Amazon\\AWSCLIV2\\aws.exe\" ec2 describe-security-groups --region ap-northeast-2)",
-      "Bash(\"C:\\Program Files\\Amazon\\AWSCLIV2\\aws.exe\" lambda list-functions --region ap-northeast-2)",
-      "Bash(where ngrok)",
-      "Bash(lt:*)",
-      "Bash(PORT=3004 npm start)",
-      "Bash(\"C:\\Program Files\\Amazon\\AWSCLIV2\\aws.exe\" s3 cp login.html s3://finalmessage-frontend-20250913/ --region ap-northeast-2)",
-      "Bash(npm run build:*)",
-      "Bash(\"C:\\Program Files\\Amazon\\AWSCLIV2\\aws.exe\" s3 sync dist/ s3://finalmessage-frontend-20250913/ --region ap-northeast-2)",
-      "Bash(npm install:*)",
-      "Bash(PORT=3004 pm2 start npm --name \"finalmessage-backend\" -- start)",
-      "Bash(pm2 restart:*)",
-      "Bash(railway login:*)",
-      "Bash(git add:*)"
+      "Bash(powershell:*)",
+      "Bash(ipconfig)"
     ],
     "deny": [],
     "ask": []
