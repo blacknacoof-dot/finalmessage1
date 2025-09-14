@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(powershell:*)",
-      "Bash(ipconfig)"
+      "Bash(ipconfig)",
+      "Bash(ssh:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(\"C:\\Program Files\\Amazon\\AWSCLIV2\\aws.exe\" ec2 describe-instances --region ap-northeast-2)",
+      "Bash(npm start)",
+      "Bash(PORT=3002 npx localtunnel --port 3002 --subdomain finalmessage-backend)"
     ],
     "deny": [],
     "ask": []
